@@ -7,3 +7,4 @@ python -m unittest discover -s tests -p 'test_*tiny*.py' -v
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 python -m vlanix_tiny.tokenizer --corpus vlanix_tiny/data/tokenizer_smoke.jsonl --output "$tmp/tokenizer.json"
+python -m vlanix_tiny.token_benchmark --output "$tmp/ngc-token-benchmark"

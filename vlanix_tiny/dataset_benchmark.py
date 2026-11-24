@@ -9,6 +9,7 @@ from vlanix_tiny.preflight import REPO,CONFIG,REVISION
 from vlanix_tiny.corpus import prepare
 from vlanix_tiny.tokenizer import train_tokenizer
 from vlanix_tiny.chunks import chunk_document,BUDGETS
+from vlanix_tiny.split_audit import quarantine_overlaps,document_key
 
 def sample_shards(streams,per_shard=128,max_bytes=2_000_000):
     if len(streams)!=4 or not 1<=per_shard<=256 or not 4<=max_bytes<=4_000_000:
@@ -58,16 +59,21 @@ def benchmark(streams,workdir,per_shard=128,max_bytes=2_000_000):
     train,val,corpus=prepare(rows)
     if not train or not val:
         raise ValueError("both document splits required")
-    report=dict(schema="vlanix-dataset-benchmark-v1",revision=REVISION,sampling=sampling,corpus=corpus,budgets={},training_authorized=False)
+    report=dict(schema="vlanix-dataset-benchmark-v2",revision=REVISION,sampling=sampling,corpus=corpus,budgets={},training_authorized=False)
     with tempfile.TemporaryDirectory(dir=workdir) as d:
         path=Path(d)/"tokenizer.json"
         tok=train_tokenizer((r["text"] for r in train),path)
         report["reserved_tokens"]=sum(t.startswith("<|reserved_") for t in tok.get_vocab())
         report["tokenizer_sha256"]=hashlib.sha256(path.read_bytes()).hexdigest()
         report["document_tokens"]={name:sum(len(tok.encode(r["text"],add_special_tokens=False).ids) for r in rs) for name,rs in (("train",train),("validation",val))}
-        for budget in BUDGETS:
-            cs={name:[c for r in rs for c in chunk_document(r,tok,budget,name)] for name,rs in (("train",train),("validation",val))}
-            result={name:density((c["token_count"] for c in chunks),budget) for name,chunks in cs.items()}
+        raw={budget:{name:[c for r in rs for c in chunk_document(r,tok,budget,name)] for name,rs in (("train",train),("validation",val))} for budget in BUDGETS}
+        clean,blocked,before=quarantine_overlaps(raw)
+        original_val_tokens=report["document_tokens"]["validation"]
+        val=[r for r in val if document_key(r) not in blocked]
+        report["document_tokens"]["validation"]=sum(len(tok.encode(r["text"],add_special_tokens=False).ids) for r in val)
+        report["quarantine"]=dict(documents=len(blocked),original_validation_tokens=original_val_tokens,removed_tokens=original_val_tokens-report["document_tokens"]["validation"],overlap_before=before,retained_validation_documents=len(val))
+        for budget,cs in clean.items():
+            result={name:density((c["token_count"] for c in chunks),budget) if chunks else dict(tokens=0,unpacked_rows=0,packed_rows=0,unpacked_density=0.0,packed_density=0.0) for name,chunks in cs.items()}
             for name,chunks in cs.items():
                 result[name]["target_tokens"]=sum(c["token_count"]-1 for c in chunks)
             result["exact_chunk_overlap"]=len({c["sha256"] for c in cs["train"]}&{c["sha256"] for c in cs["validation"]})

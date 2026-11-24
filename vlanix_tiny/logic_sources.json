@@ -1,0 +1,76 @@
+{
+  "schema": "vlanix-logic-source-candidates-v1",
+  "date": "2026-11-24",
+  "training_authorized": false,
+  "policy": "metadata only; pin revision, upstream rights, verifier and held-out audit before ingestion",
+  "sources": [
+    {
+      "repo": "tasksource/ruletaker",
+      "license_declared": "Apache-2.0",
+      "train_rows_approx": 480200,
+      "role": "candidate_rule_deduction",
+      "upstream": "https://github.com/allenai/ruletaker",
+      "status": "review_required"
+    },
+    {
+      "repo": "tasksource/proofwriter",
+      "license_declared": null,
+      "train_rows_approx": 585600,
+      "role": "candidate_multistep_reference",
+      "status": "hold_license"
+    },
+    {
+      "repo": "openai/gsm8k",
+      "license_declared": "MIT",
+      "role": "candidate_train_and_separate_test",
+      "status": "review_required"
+    },
+    {
+      "repo": "microsoft/orca-math-word-problems-200k",
+      "license_declared": "MIT",
+      "role": "later_math_candidate",
+      "status": "verify_synthetic_answers"
+    },
+    {
+      "repo": "nvidia/Nemotron-RL-ReasoningGym-v1",
+      "license_declared": "CC-BY-4.0",
+      "rows": 15000,
+      "role": "generator_reference",
+      "status": "review_required"
+    },
+    {
+      "repo": "reasoning-core/procedural-pile",
+      "license_declared": "CC-BY-4.0",
+      "rows": 24806238,
+      "role": "generator_reference_selected_families",
+      "status": "review_required"
+    },
+    {
+      "repo": "ura-hcmut/Vietnamese-MATH",
+      "license_declared": "MIT",
+      "rows_approx": 12500,
+      "role": "later_math_and_heldout",
+      "status": "review_translation_and_upstream"
+    },
+    {
+      "repo": "5CD-AI/Vietnamese-395k-meta-math-MetaMathQA-gg-translated",
+      "license_declared": "MIT",
+      "role": "later_candidate",
+      "status": "hold_translation_and_benchmark_contamination"
+    },
+    {
+      "repo": "allenai/ai2_arc",
+      "license_declared": "CC-BY-SA-4.0",
+      "role": "later_eval",
+      "status": "review_required"
+    },
+    {
+      "repo": "wikimedia/wikipedia",
+      "config": "20231101.vi",
+      "revision": "859a94672c6c0a0cfd1c19c5506d02e0e4604cda",
+      "license_declared": "CC-BY-SA-3.0/GFDL",
+      "role": "language_baseline",
+      "status": "review_required"
+    }
+  ]
+}

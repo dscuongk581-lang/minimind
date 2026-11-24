@@ -6,7 +6,7 @@ def row(text, doc="a", **kw):
 
 class CorpusTests(unittest.TestCase):
     def test_normalization_and_dedup(self):
-        a,b,m=prepare([row("Tiếng Việt là ngôn ngữ đẹp."),row("Tie\u0301ng Việt là ngôn ngữ đẹp.","b")])
+        a,b,m=prepare([row("Tiếng Việt là ngôn ngữ đẹp."),row("Tie\u0302\u0301ng Việt là ngôn ngữ đẹp.","b")])
         self.assertEqual(len(a)+len(b),1)
         self.assertEqual(m["duplicates"],1)
 

@@ -7,7 +7,7 @@ import unicodedata
 from pathlib import Path
 from collections import Counter
 
-LICENSES = {"CC0-1.0", "CC-BY-4.0", "CC-BY-SA-4.0", "MIT", "Apache-2.0"}
+LICENSES = {"CC0-1.0", "CC-BY-4.0", "CC-BY-SA-4.0", "CC-BY-SA-3.0", "MIT", "Apache-2.0"}
 EMAIL = re.compile(r"[\w.+-]+@[\w.-]+\.[a-zA-Z]{2,}")
 def digest(s):
     return hashlib.sha256(s.encode("utf-8")).hexdigest()

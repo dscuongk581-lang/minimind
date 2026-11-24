@@ -1,0 +1,25 @@
+name: VLANIX Tiny Dataset Benchmark
+on:
+  push:
+    branches: [vlanix-tiny]
+    paths:
+      - 'vlanix_tiny/dataset_benchmark.py'
+      - '.github/workflows/vlanix-tiny-dataset-benchmark.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  benchmark:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      OMP_NUM_THREADS: '2'
+      TOKENIZERS_PARALLELISM: 'false'
+      HF_HUB_DISABLE_TELEMETRY: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install datasets==3.6.0 tokenizers==0.22.2
+      - run: python -m vlanix_tiny.dataset_benchmark

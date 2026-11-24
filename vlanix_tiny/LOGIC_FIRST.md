@@ -1,18 +1,22 @@
 # VLANIX Tiny NGC — research direction (2026-11-24)
 User direction: logic-first 6M, incremental function-preserving growth,
 final parameter ceiling 30,000,000. No GPU rental until readiness gate.
-The current Wikipedia pilot remains a language baseline, not the foundation
-training corpus. No dataset is approved automatically by this document.
+Language decision (2026-11-24): English-only throughout 6M–30M, including
+foundation data, tokenizer fitting, logic rendering, replay and evaluation.
+Formal symbols and code are allowed. Vietnamese Wikipedia and tokenizer pilot
+results are historical engineering baselines only, excluded from the new
+training lineage. No multilingual capability is targeted. No dataset is
+approved automatically by this document.
 
 ## Sources screened
 See logic_sources.json. Metadata from Hugging Face, source cards and original
 RuleTaker repository. License labels are not proof of underlying rights.
 Pin immutable revisions, verify original license and attribution, review
-translations, reject invalid labels/solutions, keep test splits and derived
+original English records, reject invalid labels/solutions, keep test splits and derived
 problem families out of tokenizer fitting and training. No bulk download.
 Procedural Pile (24.8M rows, 55 families, 13.4 GB train Parquet) and Reasoning
 Gym are generator references; use selected low-depth tasks only.
-Generate original Vietnamese arithmetic, Boolean logic, rule closure,
+Generate original English arithmetic, Boolean logic, rule closure,
 ordering and state transitions with deterministic verifiers, and split by
 problem family/template, canonical symbolic instance and seed before rendering.
 Hold out novel combinations, operand ranges and wording. Keep unknown distinct
@@ -20,7 +24,7 @@ from false under an explicitly declared open-world semantics.
 
 ## Candidate training mix, by actual target tokens
 40% verified deduction/Boolean/relations; 30% arithmetic and patterns;
-15% state transitions and simple algorithms; 15% clean Vietnamese prose.
+15% state transitions and simple algorithms; 15% clean English prose.
 Compare with a prose-rich matched baseline. These proportions are hypotheses.
 Each problem has a canonical representation, verified answer, provenance,
 difficulty and version; preserve complete premise/question/answer/proof units.
@@ -29,11 +33,12 @@ blindly cut through proof/answer. Existing Wikipedia chunk protocol is a
 baseline, not yet the final logic protocol.
 
 ## Tokenizer candidates before freezing
-A: existing 4096 ByteLevel BPE, train on mixed training-only text.
+A: existing 4096 ByteLevel BPE algorithm, refit on English-only training text.
+Do not reuse the Vietnamese tokenizer artifact or remap a trained checkpoint.
 B: same 4096 capacity, byte-level BPE with digit isolation, preserving operators
 and round-trip. C: 4096 BPE with explicit numerical grouping as exploratory
 alternative. No candidate gets extra model parameters.
-Measure NFC round-trip, unknown count, reserved count, Vietnamese syllable
+Measure NFC round-trip, unknown count, reserved count, English word
 fertility, tokens per byte and per verified problem, numeric segmentation,
 whole-problem fit rates at 64/128/256/512, held-out exact answer accuracy,
 training FLOPs/time. Prefer reasoning accuracy over raw compression.
@@ -60,3 +65,12 @@ tested separately; don't claim full training trajectory equivalence.
 Compare continued 6M, grown model, scratch model under equal data and
 separately equal compute. Compression cycle optional after evidence.
 No growth or logic training has been implemented by this research record.
+
+## English-only migration boundary
+Keep existing Vietnamese experiments, commits, tests and metrics unchanged.
+New lineage starts from random 6M weights after tokenizer selection. Compare
+2048 vocabulary only as an isolated optional experiment, not an automatic
+change to the 4096 parameter-matched tokenizer candidates. Evaluate digits,
+negative signs, decimals, operators, whitespace, formal syntax, exact answer
+accuracy, unseen templates and longer reasoning chains. English-only training
+does not establish improved reasoning without controlled experiments.

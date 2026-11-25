@@ -11,3 +11,4 @@ python -m vlanix_tiny.token_benchmark --output "$tmp/ngc-token-benchmark"
 python -m vlanix_tiny.organic
 python -m vlanix_tiny.binary_logic
 python -m vlanix_tiny.binary_model
+python -m vlanix_tiny.binary_growth

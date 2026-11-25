@@ -72,9 +72,10 @@ def observe(model,groups,seed=42):
     hooks=[l.mlp.register_forward_hook(lambda mod,inp,out,i=i:outputs.__setitem__(i,out)) for i,l in enumerate(layers)]
     try:
         for name,batches in groups.items():
-            for x in batches:
+            for sample in batches:
+                x,labels=sample if isinstance(sample,tuple) else (sample,sample)
                 outputs.clear()
-                result=model(x,labels=x,use_cache=False)
+                result=model(x,labels=labels,use_cache=False)
                 grads=torch.autograd.grad(result.loss,[outputs[i] for i in range(len(layers))])
                 for i,g in enumerate(grads):
                     # Mean of token-level projected gradients, scaled by

@@ -27,11 +27,11 @@ def bit_initialize(model):
     rows[:,8:]=tail*norm/math.sqrt(2)
 
 @torch.no_grad()
-def evaluate(model,rows,majority):
+def evaluate(model,rows,majority,families=None):
     model.eval()
     results={}
     for tier in ('easy','hard','ood'):
-        for op in OPS.values():
+        for op in (OPS.values() if families is None else families):
             part=[r for r in rows if r['tier']==tier and r['family']==op]
             if not part: continue
             loss=correct=bit_correct=invalid=0

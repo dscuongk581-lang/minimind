@@ -8,3 +8,4 @@ tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
 python -m vlanix_tiny.tokenizer --corpus vlanix_tiny/data/tokenizer_smoke.jsonl --output "$tmp/tokenizer.json"
 python -m vlanix_tiny.token_benchmark --output "$tmp/ngc-token-benchmark"
+python -m vlanix_tiny.organic

@@ -27,7 +27,7 @@ def bit_initialize(model):
     rows[:,8:]=tail*norm/math.sqrt(2)
 
 @torch.no_grad()
-def evaluate(model,rows,majority,families=None):
+def evaluate(model,rows,majority,families=None,tensorizer=tensorize):
     model.eval()
     results={}
     for tier in ('easy','hard','ood'):
@@ -36,7 +36,7 @@ def evaluate(model,rows,majority,families=None):
             if not part: continue
             loss=correct=bit_correct=invalid=0
             for i in range(0,len(part),64):
-                x,y=tensorize(part[i:i+64])
+                x,y=tensorizer(part[i:i+64])
                 logits=model(x,use_cache=False).logits[:,-1]
                 loss+=F.cross_entropy(logits,y,reduction='sum').item()
                 p=logits.argmax(-1)

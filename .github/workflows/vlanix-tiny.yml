@@ -1,7 +1,7 @@
 name: VLANIX Tiny CPU
 on:
   push:
-    branches: [vlanix-tiny]
+    branches: [vlanix-sub-reset-lab]
   workflow_dispatch:
 permissions:
   contents: read
@@ -259,8 +259,8 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
-  # P0.11Y: resume W only from the four PASS P0.11X artifacts.
-  subtraction-from-consolidated:
+  # P0.11AA: reset AdamW slots; all other SUB controls unchanged.
+  subtraction-reset-from-consolidated:
     if: github.event_name == 'push'
     needs: [smoke]
     runs-on: ubuntu-latest
@@ -298,11 +298,12 @@ jobs:
           EXPECTED_SHA: ${{ matrix.sha }}
         run: printf '%s  %s\n' "$EXPECTED_SHA" parent-core/checkpoint.pt | sha256sum --check --strict
       - run: OMP_NUM_THREADS=2 python -m unittest discover -s tests -p 'test_tiny_subtraction.py' -v
-      - run: OMP_NUM_THREADS=2 python -m vlanix_tiny.subtraction_learning --seed ${{ matrix.seed }} --parent parent-core --out sub-candidate
+      - run: OMP_NUM_THREADS=2 python -m unittest discover -s tests -p 'test_tiny_learning_state.py' -v
+      - run: OMP_NUM_THREADS=2 python -m vlanix_tiny.subtraction_learning --seed ${{ matrix.seed }} --parent parent-core --out sub-candidate --optimizer-state reset
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: ngc-sub-from-consolidated-${{ matrix.seed }}
+          name: ngc-sub-reset-${{ matrix.seed }}
           path: sub-candidate/
           retention-days: 7
           if-no-files-found: ignore

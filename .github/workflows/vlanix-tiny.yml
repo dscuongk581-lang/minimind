@@ -259,12 +259,12 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
-  # P0.12A: same X parents and Y recipe, reset AdamW moments only.
-  subtraction-reset:
+  # P0.12B: same X parents, reset moments and dual readout guardian.
+  subtraction-dual-guardian:
     if: github.event_name == 'push'
     needs: [smoke]
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     permissions:
       contents: read
       actions: read
@@ -299,11 +299,12 @@ jobs:
         run: printf '%s  %s\n' "$EXPECTED_SHA" parent-core/checkpoint.pt | sha256sum --check --strict
       - run: OMP_NUM_THREADS=2 python -m unittest discover -s tests -p 'test_tiny_subtraction.py' -v
       - run: OMP_NUM_THREADS=2 python -m unittest discover -s tests -p 'test_tiny_learning_state.py' -v
-      - run: OMP_NUM_THREADS=2 python -m vlanix_tiny.subtraction_learning --optimizer-mode reset --seed ${{ matrix.seed }} --parent parent-core --out sub-candidate
+      - run: OMP_NUM_THREADS=2 python -m unittest discover -s tests -p 'test_tiny_dual_guard.py' -v
+      - run: OMP_NUM_THREADS=2 python -m vlanix_tiny.subtraction_dual_learning --optimizer-mode reset --seed ${{ matrix.seed }} --parent parent-core --out sub-candidate
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: ngc-sub-reset-${{ matrix.seed }}
+          name: ngc-sub-dual-guardian-${{ matrix.seed }}
           path: sub-candidate/
           retention-days: 7
           if-no-files-found: ignore

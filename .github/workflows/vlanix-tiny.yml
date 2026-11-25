@@ -113,3 +113,19 @@ jobs:
       - run: pip install transformers==4.57.6
       - run: OMP_NUM_THREADS=2 python -m unittest discover -s tests -p 'test_tiny_complete_rehearsal.py' -v
       - run: OMP_NUM_THREADS=2 python -m vlanix_tiny.complete_rehearsal_learning
+  margin-stability:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        seed: [42, 43, 44, 45]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+      - run: pip install transformers==4.57.6
+      - run: OMP_NUM_THREADS=2 python -m unittest discover -s tests -p 'test_tiny_margin_learning.py' -v
+      - run: OMP_NUM_THREADS=2 python -m vlanix_tiny.margin_stability_learning --seed ${{ matrix.seed }}

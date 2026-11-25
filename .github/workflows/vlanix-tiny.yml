@@ -195,3 +195,31 @@ jobs:
           path: core-candidate/
           retention-days: 7
           if-no-files-found: ignore
+  subtraction-learning:
+    needs: [smoke, core-verification]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        seed: [42, 43, 44, 45]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+      - run: pip install transformers==4.57.6
+      - uses: actions/download-artifact@v4
+        with:
+          name: ngc-core-verification-${{ matrix.seed }}
+          path: parent-core
+      - run: OMP_NUM_THREADS=2 python -m unittest discover -s tests -p 'test_tiny_subtraction.py' -v
+      - run: OMP_NUM_THREADS=2 python -m vlanix_tiny.subtraction_learning --seed ${{ matrix.seed }} --parent parent-core --out sub-candidate
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ngc-sub-candidate-${{ matrix.seed }}
+          path: sub-candidate/
+          retention-days: 7
+          if-no-files-found: ignore

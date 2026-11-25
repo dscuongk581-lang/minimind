@@ -21,3 +21,20 @@ class PI:
         elif error<0:
             self.integral=candidate
         return max(self.minimum,min(1.,1-self.kp*error-self.ki*self.integral))
+
+    def snapshot(self):
+        fields=('target','kp','ki','minimum','smoothing','integral','filtered')
+        return dict(schema='ngc-pi-v1',**{k:getattr(self,k) for k in fields})
+
+    @classmethod
+    def restore(cls,d):
+        fields=('target','kp','ki','minimum','smoothing','integral','filtered')
+        if not isinstance(d,dict) or set(d)!=set(fields)|{'schema'} or d['schema']!='ngc-pi-v1':
+            raise ValueError('PI schema')
+        if any(type(d[k]) not in (int,float) or not math.isfinite(d[k]) for k in fields):
+            raise ValueError('PI numeric state')
+        p=cls(**{k:d[k] for k in fields[:5]})
+        if not 0<=d['integral']<=(1-p.minimum)/p.ki or d['filtered']<0:
+            raise ValueError('PI state bounds')
+        p.integral=d['integral']; p.filtered=d['filtered']
+        return p

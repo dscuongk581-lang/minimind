@@ -27,13 +27,13 @@ class State:
         self.opt.zero_grad(set_to_none=True)
         return result
 
-    def save(self,path,identity):
+    def save(self,path,identity,runtime=None):
         if not isinstance(identity,str) or not identity: raise ValueError('identity')
         if any(p.grad is not None for p in self.model.parameters()): raise ValueError('step boundary')
         path=Path(path)
         payload=dict(schema=SCHEMA,identity=identity,topology=self.topology,
             steps=self.steps,model=self.model.state_dict(),optimizer=self.opt.state_dict(),
-            rng=torch.get_rng_state(),params=count_params(self.model))
+            rng=torch.get_rng_state(),params=count_params(self.model),runtime=runtime)
         fd,name=tempfile.mkstemp(prefix=path.name+'.',dir=path.parent)
         try:
             with os.fdopen(fd,'wb') as f:
@@ -64,6 +64,7 @@ class State:
             state.model.load_state_dict(d['model'],strict=True)
             state.opt.load_state_dict(d['optimizer'])
             state.steps=d['steps']
+            state.runtime=d.get('runtime')
             if count_params(state.model)!=n or state.model.model.embed_tokens.weight is not state.model.lm_head.weight:
                 raise ValueError('state invariants')
             torch.set_rng_state(d['rng'])

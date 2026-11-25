@@ -34,7 +34,7 @@ def expected(op,a,b):
 
 
 @torch.no_grad()
-def verify(m,qs,train,fresh,held,test):
+def verify(m,qs,train,fresh,held,test,extra=()):
     m.eval()
     local=predict_table(m,qs)
     assert local=={q:predict_table(m,[q])[q] for q in qs}
@@ -42,8 +42,8 @@ def verify(m,qs,train,fresh,held,test):
         return m(torch.tensor([pack_prompt(t) for t in ts]),use_cache=False).logits[:,-1].argmax(-1).tolist()
     table=readout_table(predict)
     assert len(table)==65536
-    scheduled=set(train)|set(fresh); held_set=set(held)
-    assert not scheduled&held_set and len(scheduled)==7680
+    scheduled=set(train)|set(fresh)|set(extra); held_set=set(held)
+    assert not scheduled&held_set and len(scheduled)==7680+len(extra)
     carry_groups={k:dict(rows=0,correct=0,invalid=0) for k in ('scheduled','held','other')}
     for t,p in table.items():
         b=sum(((v-9)&1)<<k for k,v in enumerate(t))
@@ -59,7 +59,7 @@ def verify(m,qs,train,fresh,held,test):
     direct_correct=sum(g['neural_byte_correct'] for g in direct.values())
     parity=direct_correct==test_cache['correct']
     # Aggregate agreement, not a claim of per-row parity for different batch shapes.
-    gate=all(g['correct']==g['rows'] for g in carry_groups.values()) and all(g['correct']==g['rows'] for g in exhaustive.values()) and direct_correct==len(test) and parity
+    gate=all(local[q]==target(q) for q in qs) and all(g['correct']==g['rows'] for g in carry_groups.values()) and all(g['correct']==g['rows'] for g in exhaustive.values()) and direct_correct==len(test) and parity
     return dict(carry_groups=carry_groups,exhaustive=exhaustive,test_cached=test_cache,test_direct=direct,
         test_aggregate_parity=parity,finite_gate=gate,local_correct=sum(local[q]==target(q) for q in qs))
 

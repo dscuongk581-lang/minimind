@@ -173,6 +173,7 @@ jobs:
       - run: OMP_NUM_THREADS=2 python -m unittest discover -s tests -p 'test_tiny_consolidation.py' -v
       - run: OMP_NUM_THREADS=2 python -m vlanix_tiny.consolidation_learning --seed ${{ matrix.seed }}
   core-verification:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -196,6 +197,7 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
   subtraction-learning:
+    if: github.event_name == 'workflow_dispatch'
     needs: [smoke, core-verification]
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -221,5 +223,37 @@ jobs:
         with:
           name: ngc-sub-candidate-${{ matrix.seed }}
           path: sub-candidate/
+          retention-days: 7
+          if-no-files-found: ignore
+  core-consolidation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        seed: [42, 43, 44, 45]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+      - run: pip install transformers==4.57.6
+      - uses: actions/download-artifact@v4
+        with:
+          name: ngc-core-verification-${{ matrix.seed }}
+          path: parent-core
+          run-id: 45615004505
+          github-token: ${{ github.token }}
+      - run: OMP_NUM_THREADS=2 python -m unittest discover -s tests -p 'test_tiny_core_consolidation.py' -v
+      - run: OMP_NUM_THREADS=2 python -m vlanix_tiny.core_consolidation_learning --seed ${{ matrix.seed }} --parent parent-core --out consolidated-core
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ngc-consolidated-core-${{ matrix.seed }}
+          path: consolidated-core/
           retention-days: 7
           if-no-files-found: ignore

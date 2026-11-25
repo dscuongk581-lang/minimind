@@ -1,0 +1,18 @@
+name: VLANIX Binary Rust
+on:
+  push:
+    branches: [vlanix-tiny]
+    paths:
+      - 'vlanix_binary/**'
+      - '.github/workflows/vlanix-binary.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install 1.85.1 --profile minimal
+      - run: cargo +1.85.1 test --manifest-path vlanix_binary/Cargo.toml --locked --offline

@@ -156,6 +156,7 @@ jobs:
       - run: OMP_NUM_THREADS=2 python -m unittest discover -s tests -p 'test_tiny_learning_state.py' -v
       - run: OMP_NUM_THREADS=2 python -m vlanix_tiny.learning_state_probe --seed ${{ matrix.seed }}
   consolidation:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -171,3 +172,26 @@ jobs:
       - run: pip install transformers==4.57.6
       - run: OMP_NUM_THREADS=2 python -m unittest discover -s tests -p 'test_tiny_consolidation.py' -v
       - run: OMP_NUM_THREADS=2 python -m vlanix_tiny.consolidation_learning --seed ${{ matrix.seed }}
+  core-verification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        seed: [42, 43, 44, 45]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+      - run: pip install transformers==4.57.6
+      - run: OMP_NUM_THREADS=2 python -m unittest discover -s tests -p 'test_tiny_core_verification.py' -v
+      - run: OMP_NUM_THREADS=2 python -m vlanix_tiny.core_verification_learning --seed ${{ matrix.seed }} --out core-candidate
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ngc-core-verification-${{ matrix.seed }}
+          path: core-candidate/
+          retention-days: 7
+          if-no-files-found: ignore

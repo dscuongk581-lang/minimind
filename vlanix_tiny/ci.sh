@@ -24,3 +24,4 @@ python -m vlanix_tiny.bit_learning
 python -m vlanix_tiny.structured_learning
 python -m vlanix_tiny.local_rule_learning
 python -m vlanix_tiny.trace_learning
+python -m vlanix_tiny.stream_learning

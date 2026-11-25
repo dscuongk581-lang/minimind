@@ -37,13 +37,13 @@ def batch(rows,local):
     return torch.tensor(x),torch.tensor(y)
 
 
-def fit(m,opt,work,guarded,qs,adaptive=False,direction=None):
+def fit(m,opt,work,guarded,qs,adaptive=False,direction=None,batch_fn=batch):
     accepted=0; min_correct=32; losses=[]; start=time.monotonic()
     attempts=0; scale_counts={}; scale_sum=0.
     gradient_trials=conflicts=0
     core=[p for p in m.parameters() if p is not m.lm_head.weight]
     for rows,local in work:
-        x,y=batch(rows,local)
+        x,y=batch_fn(rows,local)
         def update():
             nonlocal gradient_trials,conflicts
             m.train(); opt.zero_grad(set_to_none=True)

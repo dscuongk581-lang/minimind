@@ -14,6 +14,7 @@ from vlanix_tiny.local_rule import frames,target,OPS
 from vlanix_tiny.local_rule_learning import inputs,predict_table
 from vlanix_tiny.protected_core import pack_prompt
 from vlanix_tiny.adaptive_guard import backtrack
+from vlanix_tiny.learning_state import transition_optimizer
 from vlanix_tiny.margin_learning import penalty
 from vlanix_tiny.readout_balance import plan,states
 from vlanix_tiny.core_verification import readout_table,score
@@ -49,8 +50,9 @@ def predict_readout(m,ts):
     return m(torch.tensor([pack_prompt(t) for t in ts]),use_cache=False).logits[:,-1].argmax(-1).tolist()
 
 
-def run(seed,parent,out):
+def run(seed,parent,out,optimizer_mode='retain'):
     m,opt,parent_sha=load(seed,parent)
+    transition=transition_optimizer(opt,optimizer_mode)
     anchor=m.lm_head.weight.detach().clone()
     old=frames(); novel=sub.frames(); all_q=old+novel
     labels=[target(q)+9 for q in old]+[sub.target(q)+9 for q in novel]
@@ -96,7 +98,7 @@ def run(seed,parent,out):
     path=out/'checkpoint.pt'
     torch.save(dict(schema='ngc-sub-core-v1',seed=seed,parameters=EXPECTED_PARAMS,parent_sha256=parent_sha,
         model=m.state_dict(),optimizer=opt.state_dict(),rng=torch.get_rng_state(),
-        proposed_steps=120,accepted_steps=accepted),path)
+        proposed_steps=120,accepted_steps=accepted,optimizer_mode=optimizer_mode),path)
     table=predict_table(m,all_q)
     assert table=={q:predict_table(m,[q])[q] for q in all_q}
     readout=readout_table(lambda ts:predict_readout(m,ts))
@@ -109,7 +111,7 @@ def run(seed,parent,out):
     gate=(old_correct==32 and new_correct==8 and readout_correct==65536 and
           all(g['correct']==g['rows'] for g in old_report.values()) and new_report['correct']==65536)
     return dict(seed=seed,parent_sha256=parent_sha,checkpoint_sha256=sha(path),
-        parameters=EXPECTED_PARAMS,geometry=geo,initial_new_correct=initial,local_old_correct=old_correct,
+        parameters=EXPECTED_PARAMS,geometry=geo,optimizer_mode=optimizer_mode,optimizer_transition=transition,initial_new_correct=initial,local_old_correct=old_correct,
         local_new_correct=new_correct,sentinel_count=64,accepted_steps=accepted,optimizer_attempts=attempts,
         learning_trace=trace,readout=dict(rows=65536,correct=readout_correct),
         old_exhaustive=old_report,new_exhaustive=new_report,finite_gate=gate)
@@ -119,8 +121,9 @@ if __name__=='__main__':
     torch.set_num_threads(2); torch.use_deterministic_algorithms(True)
     p=argparse.ArgumentParser(); p.add_argument('--seed',type=int,required=True,choices=(42,43,44,45))
     p.add_argument('--parent',type=Path,required=True); p.add_argument('--out',type=Path,required=True)
+    p.add_argument('--optimizer-mode',choices=('retain','reset'),default='retain')
     args=p.parse_args()
-    result=run(args.seed,args.parent,args.out)
+    result=run(args.seed,args.parent,args.out,args.optimizer_mode)
     line=json.dumps(dict(schema='ngc-subtraction-learning-v1',runs=[result],
         claim='supervised novel local table with externally scheduled composition, no autonomous discovery'),sort_keys=True)
     (args.out/'report.json').write_text(line+'\n'); print(line,flush=True)

@@ -37,7 +37,7 @@ def batch(rows,local):
     return torch.tensor(x),torch.tensor(y)
 
 
-def fit(m,opt,work,guarded,qs,adaptive=False,direction=None,batch_fn=batch):
+def fit(m,opt,work,guarded,qs,adaptive=False,direction=None,batch_fn=batch,loss_fn=None):
     accepted=0; min_correct=32; losses=[]; start=time.monotonic()
     attempts=0; scale_counts={}; scale_sum=0.
     gradient_trials=conflicts=0
@@ -48,7 +48,8 @@ def fit(m,opt,work,guarded,qs,adaptive=False,direction=None,batch_fn=batch):
             nonlocal gradient_trials,conflicts
             m.train(); opt.zero_grad(set_to_none=True)
             z=m(x,use_cache=False).logits
-            loss=F.cross_entropy(z.reshape(-1,265),y.reshape(-1),ignore_index=-100)
+            loss=(F.cross_entropy(z.reshape(-1,265),y.reshape(-1),ignore_index=-100)
+                if loss_fn is None else loss_fn(z,y))
             if direction is None:
                 loss.backward()
             else:

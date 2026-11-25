@@ -22,3 +22,4 @@ python -m vlanix_tiny.embedding_conservation
 python -m vlanix_tiny.rule_transfer
 python -m vlanix_tiny.bit_learning
 python -m vlanix_tiny.structured_learning
+python -m vlanix_tiny.local_rule_learning

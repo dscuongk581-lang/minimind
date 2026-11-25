@@ -18,6 +18,7 @@ from vlanix_tiny.rule_transfer_data import or_rows
 from vlanix_tiny.stream_trace import batches
 from vlanix_tiny.protected_core import guarded_update,pack_prompt
 from vlanix_tiny.adaptive_guard import backtrack
+from vlanix_tiny.gradient_direction import combine
 from vlanix_tiny.state_invariance import reset_rollout
 from vlanix_tiny.width_probe import decode
 from vlanix_tiny.width_learning_probe import evaluate_width
@@ -36,16 +37,28 @@ def batch(rows,local):
     return torch.tensor(x),torch.tensor(y)
 
 
-def fit(m,opt,work,guarded,qs,adaptive=False):
+def fit(m,opt,work,guarded,qs,adaptive=False,direction=None):
     accepted=0; min_correct=32; losses=[]; start=time.monotonic()
     attempts=0; scale_counts={}; scale_sum=0.
+    gradient_trials=conflicts=0
+    core=[p for p in m.parameters() if p is not m.lm_head.weight]
     for rows,local in work:
         x,y=batch(rows,local)
         def update():
+            nonlocal gradient_trials,conflicts
             m.train(); opt.zero_grad(set_to_none=True)
             z=m(x,use_cache=False).logits
             loss=F.cross_entropy(z.reshape(-1,265),y.reshape(-1),ignore_index=-100)
-            loss.backward()
+            if direction is None:
+                loss.backward()
+            else:
+                new=F.cross_entropy(z[:24,9],y[:24,9])
+                old=F.cross_entropy(z[24:,4],y[24:,4])
+                g=torch.autograd.grad(new,core,retain_graph=True)
+                h=torch.autograd.grad(old,core)
+                merged,info=combine(g,h,direction=='projected')
+                for p,v in zip(core,merged): p.grad=v
+                gradient_trials+=1; conflicts+=int(info['conflict'])
             torch.nn.utils.clip_grad_norm_(m.parameters(),1.,error_if_nonfinite=True)
             opt.step(); opt.zero_grad(set_to_none=True)
             return loss.item()
@@ -67,7 +80,8 @@ def fit(m,opt,work,guarded,qs,adaptive=False):
     return dict(proposed_steps=len(work),accepted_steps=accepted,rejected_steps=len(work)-accepted,
         min_local_correct=min_correct,mean_proposed_loss=sum(losses)/len(losses),
         target_tokens=32*len(work),optimizer_attempts=attempts,attempt_target_tokens=32*attempts,
-        scale_counts=scale_counts,accepted_scale_sum=scale_sum,train_seconds=time.monotonic()-start)
+        scale_counts=scale_counts,accepted_scale_sum=scale_sum,gradient_trials=gradient_trials,
+        gradient_conflicts=conflicts,train_seconds=time.monotonic()-start)
 
 
 @torch.no_grad()
@@ -123,7 +137,8 @@ def run(seed,modes=('ordinary','guarded')):
         assert m.lm_head.weight is m.model.embed_tokens.weight
         opt=make_optimizer(m,LR); opt.load_state_dict(copy.deepcopy(moments))
         torch.set_rng_state(rng.clone()); set_policy(opt,0.)
-        stats=fit(m,opt,work,mode!='ordinary',qs,adaptive=mode=='adaptive')
+        stats=fit(m,opt,work,mode!='ordinary',qs,adaptive=mode in ('adaptive','mixed','projected'),
+            direction=mode if mode in ('mixed','projected') else None)
         geo=geometry(anchor,m.lm_head.weight); assert geo['exact']
         arms[mode]=dict(**stats,geometry=geo,embedding_sha256=tensor_hash(m.lm_head.weight),
             schedule_sha256=digest,local_correct=local_correct(m,qs),

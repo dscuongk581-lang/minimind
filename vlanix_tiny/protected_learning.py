@@ -17,6 +17,7 @@ from vlanix_tiny.math_curriculum import generate as corpus,schedule,audit
 from vlanix_tiny.rule_transfer_data import or_rows
 from vlanix_tiny.stream_trace import batches
 from vlanix_tiny.protected_core import guarded_update,pack_prompt
+from vlanix_tiny.adaptive_guard import backtrack
 from vlanix_tiny.state_invariance import reset_rollout
 from vlanix_tiny.width_probe import decode
 from vlanix_tiny.width_learning_probe import evaluate_width
@@ -35,8 +36,9 @@ def batch(rows,local):
     return torch.tensor(x),torch.tensor(y)
 
 
-def fit(m,opt,work,guarded,qs):
+def fit(m,opt,work,guarded,qs,adaptive=False):
     accepted=0; min_correct=32; losses=[]; start=time.monotonic()
+    attempts=0; scale_counts={}; scale_sum=0.
     for rows,local in work:
         x,y=batch(rows,local)
         def update():
@@ -47,15 +49,25 @@ def fit(m,opt,work,guarded,qs):
             torch.nn.utils.clip_grad_norm_(m.parameters(),1.,error_if_nonfinite=True)
             opt.step(); opt.zero_grad(set_to_none=True)
             return loss.item()
-        if guarded:
+        if adaptive:
+            assert guarded
+            result=backtrack(m,opt,update,lambda: local_correct(m,qs)==32)
+            scale=result['scale']; ok=scale is not None; loss=result['loss']
+            attempts+=result['attempts']
+        elif guarded:
             ok,loss=guarded_update(m,opt,update,lambda: local_correct(m,qs)==32)
-        else: loss=update(); ok=True
+            scale=1. if ok else None; attempts+=1
+        else: loss=update(); ok=True; scale=1.; attempts+=1
+        key=str(scale) if scale is not None else 'rejected'
+        scale_counts[key]=scale_counts.get(key,0)+1
+        scale_sum+=scale or 0.
         c=local_correct(m,qs); min_correct=min(min_correct,c)
         if guarded: assert c==32
         accepted+=int(ok); losses.append(loss)
     return dict(proposed_steps=len(work),accepted_steps=accepted,rejected_steps=len(work)-accepted,
         min_local_correct=min_correct,mean_proposed_loss=sum(losses)/len(losses),
-        target_tokens=32*len(work),train_seconds=time.monotonic()-start)
+        target_tokens=32*len(work),optimizer_attempts=attempts,attempt_target_tokens=32*attempts,
+        scale_counts=scale_counts,accepted_scale_sum=scale_sum,train_seconds=time.monotonic()-start)
 
 
 @torch.no_grad()
@@ -89,7 +101,7 @@ def evaluate(m,rows,qs):
     return groups
 
 
-def run(seed):
+def run(seed,modes=('ordinary','guarded')):
     torch.manual_seed(seed)
     old=corpus(seed); rows=old+or_rows(old)
     val=[r for r in rows if r['split']=='validation']
@@ -105,13 +117,13 @@ def run(seed):
     digest=hashlib.sha256(json.dumps([([r['id'] for r in a],b) for a,b in work],
         separators=(',',':')).encode()).hexdigest()
     arms={}
-    for mode in ('ordinary','guarded'):
+    for mode in modes:
         m=make_binary_model(); m.load_state_dict(weights,strict=True)
         assert sum(p.numel() for p in m.parameters())==EXPECTED_PARAMS
         assert m.lm_head.weight is m.model.embed_tokens.weight
         opt=make_optimizer(m,LR); opt.load_state_dict(copy.deepcopy(moments))
         torch.set_rng_state(rng.clone()); set_policy(opt,0.)
-        stats=fit(m,opt,work,mode=='guarded',qs)
+        stats=fit(m,opt,work,mode!='ordinary',qs,adaptive=mode=='adaptive')
         geo=geometry(anchor,m.lm_head.weight); assert geo['exact']
         arms[mode]=dict(**stats,geometry=geo,embedding_sha256=tensor_hash(m.lm_head.weight),
             schedule_sha256=digest,local_correct=local_correct(m,qs),

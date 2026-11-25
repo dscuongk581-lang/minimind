@@ -226,6 +226,7 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
   core-consolidation:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
@@ -255,5 +256,53 @@ jobs:
         with:
           name: ngc-consolidated-core-${{ matrix.seed }}
           path: consolidated-core/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  # P0.11Y: resume W only from the four PASS P0.11X artifacts.
+  subtraction-from-consolidated:
+    if: github.event_name == 'push'
+    needs: [smoke]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - seed: 42
+            sha: 26b86ffaf246d0a6bf5421836e31632128d13daba943c297c4f8d1774bf995fb
+          - seed: 43
+            sha: 8cc01419374af96662e7712e01cc3c9efad9e2e7fcb7d266e32f6fbffb5fd76e
+          - seed: 44
+            sha: 15c7080ceccf2a065d0d29e66323be63cf2e08f92241fccb21f2a41ff9cfa879
+          - seed: 45
+            sha: 86bb0709b33d7b363a15be19f91cbe74eb56f057edb757c0a4830892cd65b29f
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+      - run: pip install transformers==4.57.6
+      - uses: actions/download-artifact@v4
+        with:
+          name: ngc-consolidated-core-${{ matrix.seed }}
+          path: parent-core
+          run-id: 45616964741
+          github-token: ${{ github.token }}
+      - name: Verify pinned P0.11X checkpoint SHA-256
+        env:
+          EXPECTED_SHA: ${{ matrix.sha }}
+        run: printf '%s  %s\n' "$EXPECTED_SHA" parent-core/checkpoint.pt | sha256sum --check --strict
+      - run: OMP_NUM_THREADS=2 python -m unittest discover -s tests -p 'test_tiny_subtraction.py' -v
+      - run: OMP_NUM_THREADS=2 python -m vlanix_tiny.subtraction_learning --seed ${{ matrix.seed }} --parent parent-core --out sub-candidate
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ngc-sub-from-consolidated-${{ matrix.seed }}
+          path: sub-candidate/
           retention-days: 7
           if-no-files-found: ignore

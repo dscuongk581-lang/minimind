@@ -15,3 +15,4 @@ python -m vlanix_tiny.binary_growth
 python -m vlanix_tiny.binary_homeostasis
 python -m vlanix_tiny.guarded_session
 python -m vlanix_tiny.ram_migration
+python -m vlanix_tiny.state_commit_probe

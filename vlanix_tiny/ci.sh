@@ -17,3 +17,4 @@ python -m vlanix_tiny.guarded_session
 python -m vlanix_tiny.ram_migration
 python -m vlanix_tiny.state_commit_probe
 python -m vlanix_tiny.learning_receipt_probe
+python -m vlanix_tiny.math_learning

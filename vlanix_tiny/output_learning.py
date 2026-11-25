@@ -17,6 +17,7 @@ from vlanix_tiny.rule_transfer_data import or_rows
 from vlanix_tiny.stream_trace import encode,generate,batches
 from vlanix_tiny.stream_learning import fit
 from vlanix_tiny.output_objective import weighted_loss,decode_states
+from vlanix_tiny.width_learning_probe import evaluate_width
 
 @torch.no_grad()
 def evaluate(m,rows):
@@ -75,7 +76,7 @@ def run(seed):
             loss_weight_mass=[192,24*fw,8*lw],
             geometry=geo,embedding_sha256=tensor_hash(m.lm_head.weight),
             schedule_sha256=digest,local_correct=local_correct(m,qs),
-            validation=evaluate(m,val))
+            validation=evaluate(m,val),width_probe=evaluate_width(m,val,seed))
     return dict(seed=seed,parameters=EXPECTED_PARAMS,foundation_steps=120,
         foundation_local_correct=32,dataset=audit(old),validation_rows=len(val),
         test_rows_used=0,arms=arms)

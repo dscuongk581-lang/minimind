@@ -15,9 +15,11 @@ class MathCurriculumTests(unittest.TestCase):
         rows=generate(42); report=audit(rows)
         self.assertEqual(rows,generate(42))
         self.assertEqual(report['train_byte_coverage'],256)
-        self.assertEqual(report['counts']['easy/train'],288)
-        self.assertEqual(report['counts']['hard/train'],1152)
-        self.assertEqual(report['counts']['ood/validation'],288)
+        self.assertEqual(report['counts'],{
+            'train/easy':288, 'validation/easy':72, 'test/easy':48,
+            'train/hard':1152, 'validation/hard':288, 'test/hard':288,
+            'validation/ood':288, 'test/ood':288})
+        self.assertEqual(sum(report['counts'].values()),len(rows))
         self.assertEqual(len(rows),3*(136+384+96+96+96+96))
         pair={}
         for row in rows:

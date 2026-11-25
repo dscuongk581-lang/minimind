@@ -17,7 +17,7 @@ from vlanix_tiny.math_curriculum import generate as corpus,schedule,audit
 from vlanix_tiny.rule_transfer_data import or_rows
 from vlanix_tiny.stream_trace import encode,generate,batches
 
-def fit(m,opt,work,mode):
+def fit(m,opt,work,mode,loss_fn=None):
     loss_sum=0.; n=0; start=time.monotonic()
     m.train()
     for rows,local in work:
@@ -35,7 +35,8 @@ def fit(m,opt,work,mode):
         count=int((b!=-100).sum()); assert count==224
         opt.zero_grad(set_to_none=True)
         logits=m(a,use_cache=False).logits
-        loss=F.cross_entropy(logits.reshape(-1,265),b.reshape(-1),ignore_index=-100)
+        loss=(F.cross_entropy(logits.reshape(-1,265),b.reshape(-1),ignore_index=-100)
+            if loss_fn is None else loss_fn(logits,b))
         loss.backward()
         torch.nn.utils.clip_grad_norm_(m.parameters(),1.,error_if_nonfinite=True)
         opt.step(); loss_sum+=loss.item()*count; n+=count

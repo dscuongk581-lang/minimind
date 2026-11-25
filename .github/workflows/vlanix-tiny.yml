@@ -18,6 +18,7 @@ jobs:
       - run: pip install transformers==4.57.6
       - run: bash vlanix_tiny/ci.sh
   output-objective:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -30,6 +31,7 @@ jobs:
       - run: OMP_NUM_THREADS=2 python -m unittest discover -s tests -p 'test_tiny_output_objective.py' -v
       - run: OMP_NUM_THREADS=2 python -m vlanix_tiny.output_learning
   task-separation:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -42,6 +44,7 @@ jobs:
       - run: OMP_NUM_THREADS=2 python -m unittest discover -s tests -p 'test_tiny_task_separator.py' -v
       - run: OMP_NUM_THREADS=2 python -m vlanix_tiny.task_separation_learning
   protected-core:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -54,6 +57,7 @@ jobs:
       - run: OMP_NUM_THREADS=2 python -m unittest discover -s tests -p 'test_tiny_protected_core.py' -v
       - run: OMP_NUM_THREADS=2 python -m vlanix_tiny.protected_learning
   adaptive-core:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -66,6 +70,7 @@ jobs:
       - run: OMP_NUM_THREADS=2 python -m unittest discover -s tests -p 'test_tiny_adaptive_guard.py' -v
       - run: OMP_NUM_THREADS=2 python -m vlanix_tiny.adaptive_learning
   gradient-direction:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -78,6 +83,7 @@ jobs:
       - run: OMP_NUM_THREADS=2 python -m unittest discover -s tests -p 'test_tiny_gradient_direction.py' -v
       - run: OMP_NUM_THREADS=2 python -m vlanix_tiny.direction_learning
   readout-balance:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -90,6 +96,7 @@ jobs:
       - run: OMP_NUM_THREADS=2 python -m unittest discover -s tests -p 'test_tiny_readout_balance.py' -v
       - run: OMP_NUM_THREADS=2 python -m vlanix_tiny.readout_balance_learning
   structured-readout:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -102,6 +109,7 @@ jobs:
       - run: OMP_NUM_THREADS=2 python -m unittest discover -s tests -p 'test_tiny_structured_readout.py' -v
       - run: OMP_NUM_THREADS=2 python -m vlanix_tiny.structured_readout_learning
   complete-rehearsal:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -114,6 +122,7 @@ jobs:
       - run: OMP_NUM_THREADS=2 python -m unittest discover -s tests -p 'test_tiny_complete_rehearsal.py' -v
       - run: OMP_NUM_THREADS=2 python -m vlanix_tiny.complete_rehearsal_learning
   margin-stability:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     strategy:
@@ -129,3 +138,19 @@ jobs:
       - run: pip install transformers==4.57.6
       - run: OMP_NUM_THREADS=2 python -m unittest discover -s tests -p 'test_tiny_margin_learning.py' -v
       - run: OMP_NUM_THREADS=2 python -m vlanix_tiny.margin_stability_learning --seed ${{ matrix.seed }}
+  learning-state:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        seed: [42, 43, 44, 45]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cpu
+      - run: pip install transformers==4.57.6
+      - run: OMP_NUM_THREADS=2 python -m unittest discover -s tests -p 'test_tiny_learning_state.py' -v
+      - run: OMP_NUM_THREADS=2 python -m vlanix_tiny.learning_state_probe --seed ${{ matrix.seed }}

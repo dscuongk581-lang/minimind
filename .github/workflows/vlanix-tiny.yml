@@ -1,7 +1,7 @@
 name: VLANIX Tiny CPU
 on:
   push:
-    branches: [vlanix-p012d-actual-update]
+    branches: [vlanix-p012e-safe-region]
   workflow_dispatch:
 permissions:
   contents: read
@@ -259,8 +259,8 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
-  # P0.12D: same X parents and dual guardian, add actual update projection.
-  subtraction-actual-update:
+  # P0.12E.1: same X parents, separate post-AdamW constraints.
+  subtraction-safe-region:
     if: github.event_name == 'push'
     needs: [smoke]
     runs-on: ubuntu-latest
@@ -302,11 +302,13 @@ jobs:
       - run: OMP_NUM_THREADS=2 python -m unittest discover -s tests -p 'test_tiny_dual_guard.py' -v
       - run: OMP_NUM_THREADS=2 python -m unittest discover -s tests -p 'test_tiny_acquisition_direction.py' -v
       - run: OMP_NUM_THREADS=2 python -m unittest discover -s tests -p 'test_tiny_actual_update.py' -v
-      - run: OMP_NUM_THREADS=2 python -m vlanix_tiny.subtraction_actual_learning --optimizer-mode reset --seed ${{ matrix.seed }} --parent parent-core --out sub-candidate
+      - run: OMP_NUM_THREADS=2 python -m unittest discover -s tests -p 'test_tiny_safe_region.py' -v
+      - run: OMP_NUM_THREADS=2 python -m unittest discover -s tests -p 'test_tiny_safe_step.py' -v
+      - run: OMP_NUM_THREADS=2 python -m vlanix_tiny.subtraction_safe_learning --optimizer-mode reset --seed ${{ matrix.seed }} --parent parent-core --out sub-candidate
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: ngc-sub-actual-update-${{ matrix.seed }}
+          name: ngc-sub-safe-region-${{ matrix.seed }}
           path: sub-candidate/
           retention-days: 7
           if-no-files-found: ignore
